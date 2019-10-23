@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Twitter Wall</title>
+    <meta name="description" content="Twitter Wall">
+    <link id="favicon" rel="icon" href="twitter.png" type="image/x-icon">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- import the webpage's stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="container">
+      <div class="tweet-container">
+        <div class="tweet-handle-container">
+            <div class="tweet-handle-image">
+              <img id="user-image" src="twitter-logo.jpg" />
+            </div>
+            <div class="tweet-handle-name">
+              <p id="user-name">Twitter Stream</p>
+              <p id="user-description">Using twitter stream API</p>
+            </div>
+          </div>
+        <div class="tweet-content" id="content">
+            Let the tweets slide one by one 
+        </div>
+        <form>
+          Search Key: <input type="text" name="keyword"><br>
+          <input type="submit" value="Submit">
+        </form>
+        
+      </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js" integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script>
+
+      $( "form" ).submit(function( event ) {
+        console.log(`Key: ${$( "input" ).first().val()}`);
+        fetch(`http://localhost:8080/tweet?source=${$( "input" ).first().val()}`).then(res => console.log("API Status: ", res.status));
+        event.preventDefault();
+      });
+
+      var socket = io();
+      var tweetArray = [];
+      var index = 0;
+      socket.on('connect',function(data){
+         console.log('connected');
+      })
+      socket.on('tweet', function (tweet) {
+          console.log(tweet.tweet);
+          var tweetbody = {
+            'text': tweet.tweet.text,
+            'userScreenName': "@" + tweet.tweet.user.screen_name,
+            'userImage': tweet.tweet.user.profile_image_url_https,
+            'userDescription': tweet.tweet.user.description,
+          }
+          try {
+            if(tweet.tweet.entities.media[0].media_url_https) {
+              tweetbody['image'] = tweet.tweet.entities.media[0].media_url_https;
+            }
+          } catch(err) { }
+          tweetArray.unshift(tweetbody);
+      });
+
+      
+      socket.on('allTweet', function (tweet) {
+          console.log(tweet);
+          tweetArray=tweet;
+          loopArray();
+      });
+      
+
+      function loopArray() {
+        if(tweetArray.length > index) {
+          $(".img-container").removeClass('noimage');
+          var currentTweet = tweetArray[index];
+          index ++;
+            $('#user-name').html(currentTweet.userScreenName);
+            $('#user-description').html(currentTweet.userDescription);
+            $('#content').html(currentTweet.text);
+            $("#user-image").attr("src",currentTweet.userImage);
+            if(currentTweet.image) {            
+              $("#image").attr("src",currentTweet.image);            
+            }else{
+               $(".img-container").addClass('noimage');
+            }
+        } else {
+          index = 0;
+        }
+        setTimeout(loopArray, 10000);
+      }
+    </script>
+  </body>
+</html>
