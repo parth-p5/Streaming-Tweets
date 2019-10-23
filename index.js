@@ -10,7 +10,10 @@ var config = require('./config');
 app.use(express.static('public'));
 
 app.get('/tweet', function(req, res){
-  T.get('search/tweets', { q: req.query.source, count: 100 }, function(err, data, response) {
+  
+  var keyword = req.query.source;
+
+  T.get('search/tweets', { q: keyword, count: 100 }, function(err, data, response) {
     var tweetArray=[];
       for (let index = 0; index < data.statuses.length; index++) {
           const tweet = data.statuses[index];
@@ -28,17 +31,14 @@ app.get('/tweet', function(req, res){
           tweetArray.push(tweetbody);
       }     
       io.emit('allTweet',tweetArray)
-  })
+  });
+  
+  var stream = T.stream('statuses/filter', { track: `#${keyword}`, language: 'en' });
+  stream.on('tweet', function (tweet) {
+    io.emit('tweet',{ 'tweet': tweet });
+  });
+  
   res.send("Success");
-});
-
-io.on('connection', function(socket) {
-
-    var stream = T.stream('statuses/filter', { track: '#coding', language: 'en' })
-
-    stream.on('tweet', function (tweet) {
-        io.emit('tweet',{ 'tweet': tweet });
-    })
 });
 
 var T = new Twit(config.twitter);
